@@ -1,0 +1,155 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  build-test:
+    name: build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      # Package versions are pinned and updated by hand, so a known vulnerability in any direct or
+      # transitive package fails the build. Fix it with a pinned upgrade in Directory.Packages.props.
+      - name: Audit for vulnerable packages
+        run: |
+          set -o pipefail
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerable-packages.txt
+          if grep -q "has the following vulnerable packages" vulnerable-packages.txt; then
+            echo "::error::Known-vulnerable NuGet packages found (see the list above)"
+            exit 1
+          fi
+
+      - name: Format check
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Build (warnings are errors)
+        run: dotnet build --no-restore --configuration Release
+
+      # Unit, property and golden tests, then integration tests: flagd and Prometheus start through Testcontainers on
+      # the runner's Docker engine, the demo API is hosted in-process and the real controller runs against both.
+      - name: Test
+        run: >
+          dotnet test --no-build --configuration Release
+          --coverage --coverage-output-format cobertura
+          --results-directory "${{ github.workspace }}/TestResults"
+
+      - name: Coverage summary
+        if: always()
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.12
+        with:
+          reports: TestResults/**/*.cobertura.xml
+          targetdir: coverage
+          reporttypes: MarkdownSummaryGithub
+          assemblyfilters: "-*Tests*;-FlagsRollout.Lab;-FlagsRollout.LoadGen"
+          filefilters: "-*/obj/*"
+
+      - name: Publish coverage to job summary
+        if: always()
+        run: |
+          if [ -f coverage/SummaryGithub.md ]; then
+            cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No coverage report produced."
+          fi
+
+      # The lab is deterministic per seed; a short run keeps it compiling and running.
+      - name: Policy lab smoke run
+        run: dotnet run --no-build --configuration Release --project benchmarks/FlagsRollout.Lab -- policies 20
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-results
+          path: TestResults/
+          retention-days: 7
+
+  container:
+    name: container images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build images
+        run: |
+          for target in controller demo-api loadgen; do
+            docker buildx build --target "$target" --load \
+              --cache-from type=gha,scope=flags-rollout --cache-to type=gha,mode=max,scope=flags-rollout \
+              -t "flags-rollout-$target:ci" .
+          done
+
+      - name: Verify every image runs as non-root
+        run: |
+          for target in controller demo-api loadgen; do
+            user=$(docker image inspect "flags-rollout-$target:ci" --format '{{.Config.User}}')
+            echo "flags-rollout-$target user: ${user}"
+            test -n "${user}" && test "${user}" != "0" && test "${user}" != "root"
+          done
+
+  compose-demo:
+    name: docker compose demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # The README promises `docker compose up` runs the whole demo with zero manual steps; this job keeps it true.
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: The canary advances, breaks, and is rolled back
+        run: |
+          code=$(docker wait flags-rollout-loadgen-1)
+          docker compose logs --no-log-prefix loadgen | tee loadgen.log
+          test "${code}" = "0"
+          grep -q '"rolledBack":true' loadgen.log
+          grep -q '"stepsObserved":\[10,25\]' loadgen.log
+          grep -q '"canaryResponsesAfterQuiet":0' loadgen.log
+
+      - name: The controller reports the rollback, and the flag serves the baseline
+        run: |
+          curl -fsS http://127.0.0.1:58381/status | tee status.json
+          grep -q '"phase":"rolled-back"' status.json
+          for i in $(seq 1 20); do
+            curl -fsS "http://127.0.0.1:58380/api/v1/quote?customerId=c-$i" | grep -q '"variant":"off"'
+          done
+
+      - name: The scenario can be re-run against the same stack
+        run: docker compose run --rm loadgen | tail -1 | grep -q '"rolledBack":true'
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
