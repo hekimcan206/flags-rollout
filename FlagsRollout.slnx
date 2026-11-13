@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/FlagsRollout.Core/FlagsRollout.Core.csproj" />
     <Project Path="src/FlagsRollout.Controller/FlagsRollout.Controller.csproj" />
+    <Project Path="src/FlagsRollout.DemoApi/FlagsRollout.DemoApi.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FlagsRollout.UnitTests/FlagsRollout.UnitTests.csproj" />
