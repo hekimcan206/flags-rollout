@@ -1,0 +1,32 @@
+{
+  "flags": {
+    "new-pricing-engine": {
+      "state": "ENABLED",
+      "variants": {
+        "on": true,
+        "off": false
+      },
+      "defaultVariant": "off",
+      "targeting": {
+        "fractional": [
+          {
+            "var": "storeId"
+          },
+          [
+            "on",
+            50
+          ],
+          [
+            "off",
+            50
+          ]
+        ]
+      },
+      "metadata": {
+        "rolloutPhase": "progressing",
+        "rolloutReason": "healthy for 120s at 25%",
+        "rolloutUpdatedAt": "2026-11-13T09:30:00.000Z"
+      }
+    }
+  }
+}

@@ -3,4 +3,7 @@
     <Project Path="src/FlagsRollout.Core/FlagsRollout.Core.csproj" />
     <Project Path="src/FlagsRollout.Controller/FlagsRollout.Controller.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FlagsRollout.UnitTests/FlagsRollout.UnitTests.csproj" />
+  </Folder>
 </Solution>

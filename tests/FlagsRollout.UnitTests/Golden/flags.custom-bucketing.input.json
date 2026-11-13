@@ -1,0 +1,16 @@
+{
+  "flags": {
+    "new-pricing-engine": {
+      "state": "ENABLED",
+      "variants": { "on": true, "off": false },
+      "defaultVariant": "off",
+      "targeting": {
+        "fractional": [
+          { "var": "storeId" },
+          [ "on", 1 ],
+          [ "off", 3 ]
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://flagd.dev/schema/v0/flags.json",
+  "flags": {
+    "new-pricing-engine": {
+      "state": "ENABLED",
+      "variants": {
+        "on": true,
+        "off": false
+      },
+      "defaultVariant": "on",
+      "metadata": {
+        "owner": "pricing-team",
+        "ticket": "PRC-142",
+        "rolloutPhase": "promoted",
+        "rolloutReason": "healthy for 120s at 50%",
+        "rolloutUpdatedAt": "2026-11-13T09:30:00.000Z"
+      }
+    },
+    "checkout-banner": {
+      "state": "ENABLED",
+      "variants": {
+        "summer": "Summer sale <20% off>",
+        "none": ""
+      },
+      "defaultVariant": "none",
+      "targeting": {
+        "if": [
+          {
+            "ends_with": [
+              {
+                "var": "email"
+              },
+              "@example.com"
+            ]
+          },
+          "summer",
+          null
+        ]
+      }
+    }
+  },
+  "$evaluators": {
+    "internal": {
+      "in": [
+        "@example.com",
+        {
+          "var": "email"
+        }
+      ]
+    }
+  }
+}
