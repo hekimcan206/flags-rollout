@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Canary analysis, rollout state machine and flagd flag-definition rewrites. No I/O, no clocks: every decision is a pure function of its inputs.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FlagsRollout.UnitTests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FlagsRollout.Core/FlagsRollout.Core.csproj" />
+  </Folder>
+</Solution>
