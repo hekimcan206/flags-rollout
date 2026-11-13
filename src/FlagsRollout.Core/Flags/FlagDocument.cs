@@ -25,6 +25,8 @@ public sealed class FlagDocument
     {
         WriteIndented = true,
         IndentSize = 2,
+        // Same bytes on every OS: the content hash is the concurrency token, and the file is diffed in reviews.
+        NewLine = "\n",
         // Flag files are read by humans; keep '<', '>' and non-ASCII readable. The output is never embedded in HTML.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };

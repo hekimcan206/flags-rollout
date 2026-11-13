@@ -32,6 +32,7 @@ public sealed class FlagDocumentTests
         PropertyTests.FirstBucket(advanced).Should().Be("on");
         advanced.ToJson().Should().MatchRegex("\"off\",\\s+63");
         advanced.GetRolloutMetadata(Flag)!.Phase.Should().Be("progressing");
+        advanced.ToJson().Should().NotContain("\r", "the file must be byte-identical on every OS; its hash is the concurrency token");
     }
 
     [Fact]
