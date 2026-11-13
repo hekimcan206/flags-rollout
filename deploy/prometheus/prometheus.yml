@@ -1,0 +1,10 @@
+# Prometheus is the metrics store the rollout controller queries. Nothing is scraped: the demo API and the
+# controller push OTLP metrics to /api/v1/otlp/v1/metrics (enabled with --web.enable-otlp-receiver).
+global:
+  evaluation_interval: 15s
+
+otlp:
+  # Default translation, written down because the controller's PromQL depends on it:
+  # rollout.requests -> rollout_requests_total, feature_flag.result.variant -> feature_flag_result_variant,
+  # service.instance.id -> instance.
+  translation_strategy: UnderscoreEscapingWithSuffixes
