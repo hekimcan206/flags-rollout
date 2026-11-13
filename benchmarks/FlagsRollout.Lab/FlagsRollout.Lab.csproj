@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Description>The lab: replays simulated canaries through the real policies and state machine, and measures flag propagation through a real flagd.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FlagsRollout.Core\FlagsRollout.Core.csproj" />
+    <ProjectReference Include="..\..\src\FlagsRollout.Controller\FlagsRollout.Controller.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,14 +1,17 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/FlagsRollout.Lab/FlagsRollout.Lab.csproj" />
+  </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/FlagsRollout.LoadGen/FlagsRollout.LoadGen.csproj" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/FlagsRollout.Core/FlagsRollout.Core.csproj" />
     <Project Path="src/FlagsRollout.Controller/FlagsRollout.Controller.csproj" />
+    <Project Path="src/FlagsRollout.Core/FlagsRollout.Core.csproj" />
     <Project Path="src/FlagsRollout.DemoApi/FlagsRollout.DemoApi.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/FlagsRollout.UnitTests/FlagsRollout.UnitTests.csproj" />
     <Project Path="tests/FlagsRollout.IntegrationTests/FlagsRollout.IntegrationTests.csproj" />
+    <Project Path="tests/FlagsRollout.UnitTests/FlagsRollout.UnitTests.csproj" />
   </Folder>
 </Solution>
