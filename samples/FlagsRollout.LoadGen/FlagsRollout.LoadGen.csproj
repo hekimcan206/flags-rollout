@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Description>Demo driver: synthetic checkout traffic, a fault injected into the canary mid-rollout, and a JSON verdict on whether the controller rolled it back.</Description>
+  </PropertyGroup>
+
+</Project>

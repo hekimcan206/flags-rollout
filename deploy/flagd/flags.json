@@ -1,0 +1,24 @@
+{
+  "$schema": "https://flagd.dev/schema/v0/flags.json",
+  "flags": {
+    "new-pricing-engine": {
+      "state": "ENABLED",
+      "variants": {
+        "on": true,
+        "off": false
+      },
+      "defaultVariant": "off",
+      "targeting": {
+        "fractional": [
+          { "cat": [ { "var": "$flagd.flagKey" }, { "var": "targetingKey" } ] },
+          [ "on", 10 ],
+          [ "off", 90 ]
+        ]
+      },
+      "metadata": {
+        "owner": "pricing",
+        "description": "New tiered discount engine; canary managed by the rollout controller"
+      }
+    }
+  }
+}

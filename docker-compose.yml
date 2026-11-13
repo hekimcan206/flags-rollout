@@ -1,0 +1,123 @@
+# `docker compose up --build` runs the whole demo: a canary advances 10% -> 25%, the load generator breaks the new
+# pricing engine, the controller rolls the flag back, and the load generator prints the measured timings and exits.
+name: flags-rollout
+
+x-dotnet-env: &dotnet-env
+  DOTNET_gcServer: "0"
+  ASPNETCORE_URLS: http://+:8080
+
+services:
+  # Copies the seed flag file into the shared volume once; a later `up` keeps whatever the controller wrote.
+  seed:
+    build:
+      context: .
+      target: controller
+    image: flags-rollout-controller:local
+    command: ["seed", "/seed/flags.json", "/flags/flags.json"]
+    volumes:
+      - flags:/flags
+      - ./deploy/flagd/flags.json:/seed/flags.json:ro
+
+  flagd:
+    image: ghcr.io/open-feature/flagd:v0.18.2
+    command: ["start", "--uri", "file:/flags/flags.json"]
+    volumes:
+      - flags:/flags:ro
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    mem_limit: 128m
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2h
+      - --web.enable-otlp-receiver
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:58390:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 512m
+
+  demo-api:
+    build:
+      context: .
+      target: demo-api
+    image: flags-rollout-demo-api:local
+    environment:
+      <<: *dotnet-env
+      Flagd__Host: flagd
+      Flagd__Port: "8013"
+      Admin__ApiKey: ${ADMIN_KEY:-admin-dev-only}
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+      Otel__MetricExportIntervalMs: "1000"
+      Otel__ServiceInstanceId: demo-api-1
+    ports:
+      - "127.0.0.1:58380:8080"
+    depends_on:
+      flagd:
+        condition: service_started
+      prometheus:
+        condition: service_healthy
+    mem_limit: 256m
+
+  controller:
+    build:
+      context: .
+      target: controller
+    image: flags-rollout-controller:local
+    environment:
+      <<: *dotnet-env
+      Rollout__FlagFile: /flags/flags.json
+      Rollout__PrometheusUrl: http://prometheus:9090
+      # Demo timings: short so the whole story fits in about a minute. Production values are in appsettings.json.
+      Rollout__TickInterval: "00:00:02"
+      Rollout__Window: "00:00:20"
+      Rollout__BakeTime: "00:00:10"
+      Rollout__MinRequests: "50"
+      Rollout__AuditLog: /flags/audit.jsonl
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+    volumes:
+      - flags:/flags
+    ports:
+      - "127.0.0.1:58381:8080"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      prometheus:
+        condition: service_healthy
+    mem_limit: 256m
+
+  loadgen:
+    build:
+      context: .
+      target: loadgen
+    image: flags-rollout-loadgen:local
+    environment:
+      API_URL: http://demo-api:8080
+      CONTROLLER_URL: http://controller:8080
+      ADMIN_KEY: ${ADMIN_KEY:-admin-dev-only}
+      FLAG_FILE: /flags/flags.json
+      SEED_FLAG_FILE: /seed/flags.json
+      RPS: "100"
+      FAULT_AT_PERCENT: "25"
+      CANARY_ERROR_RATE: "0.30"
+    volumes:
+      - flags:/flags
+      - ./deploy/flagd/flags.json:/seed/flags.json:ro
+    depends_on:
+      demo-api:
+        condition: service_started
+      controller:
+        condition: service_started
+    mem_limit: 256m
+
+volumes:
+  flags:

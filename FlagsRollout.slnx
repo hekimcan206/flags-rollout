@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/FlagsRollout.LoadGen/FlagsRollout.LoadGen.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/FlagsRollout.Core/FlagsRollout.Core.csproj" />
     <Project Path="src/FlagsRollout.Controller/FlagsRollout.Controller.csproj" />
